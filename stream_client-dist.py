@@ -4,11 +4,7 @@ from getpass import getpass
 from textwrap import TextWrapper
 
 import tweepy
-                           
-CONSUMER_KEY = "<YOUR TWITTER CONSUMER KEY HERE>"
-CONSUMER_KEY_SECRET = "<YOUR TWITTER CONSUMER KEY SECRET HERE>"
-TEST_OAUTH_TOKEN = "<YOUR TWITTER TEST OAUTH TOKEN HERE>"
-TEST_OAUTH_TOKEN_SECRET = "<YOUR TWITTER TEST OAUTH TOKEN SECRET HERE>"
+import settings                          
 
 class StreamWatcherListener(tweepy.StreamListener):
 
@@ -32,8 +28,8 @@ class StreamWatcherListener(tweepy.StreamListener):
 
 
 def main():
-    auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-    auth.set_access_token(ACCESS_TOKEN, ACCESS_SECRET)
+    auth = tweepy.OAuthHandler(settings.CONSUMER_KEY, settings.CONSUMER_SECRET)
+    auth.set_access_token(settings.ACCESS_TOKEN, settings.ACCESS_SECRET)
     print "Welcome %s!" % auth.get_username()
     stream = tweepy.Stream(auth, StreamWatcherListener(), timeout=None)
     

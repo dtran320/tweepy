@@ -15,12 +15,14 @@ from tweepy.error import TweepError
 
 from tweepy.utils import import_simplejson
 json = import_simplejson()
+import settings
+
 
 STREAM_VERSION = 1
 
 STREAM_HOST = 'stream.twitter.com'
 SITE_STREAM_HOST = 'betastream.twitter.com'
-APP_NAME = 'conversely1.0'
+APP_NAME = settings.APP_NAME
 
 class StreamListener(object):
 
