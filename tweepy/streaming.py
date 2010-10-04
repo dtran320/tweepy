@@ -33,7 +33,7 @@ class StreamListener(object):
         Override this method if you wish to manually handle
         the stream data. Return False to stop stream and close connection.
         """
-
+        print data
         if 'in_reply_to_status_id' in data:
             status = Status.parse(self.api, json.loads(data))
             if self.on_status(status) is False:
@@ -45,18 +45,19 @@ class StreamListener(object):
         elif 'limit' in data:
             if self.on_limit(json.loads(data)['limit']['track']) is False:
                 return False
+        
 
     def on_status(self, status):
         """Called when a new status arrives"""
-        return
+        return True
 
     def on_delete(self, status_id, user_id):
         """Called when a delete notice arrives for a status"""
-        return
+        return True
 
     def on_limit(self, track):
         """Called when a limitation notice arrvies"""
-        return
+        return True
 
     def on_error(self, status_code):
         """Called when a non-200 status code is returned"""
@@ -64,9 +65,68 @@ class StreamListener(object):
 
     def on_timeout(self):
         """Called when stream connection times out"""
-        return
+        return True
 
+class SiteStreamListener(object):
+    def __init__(self, api=None):
+        self.api = api or API()
 
+    def on_data(self, data):
+        """
+        Generic class for site streams that just print each 
+        action that comes in - override these methods to actually
+        process them
+        """
+        if 'for_user' in data:
+            parsed_data = json.loads(data)
+            user_id = parsed_data['for_user']
+            if 'message' in data:
+                message = parsed_data['message']
+                if u'friends' in message:
+                    if self.on_friends(user_id, message['friends']) is False:
+                        return False
+                elif u'event' in message:
+                    if message[u'event'] == u'follow':
+                        if self.on_follow(user_id, source=message[u'source'], target=message[u'target'], time=message[u'created_at']) is False:
+                            return False
+                elif u'retweeted_status' in message:
+                    if self.on_retweet(user_id, message) is False:
+                        return False
+                elif u'text' in message:
+                    status = Status.parse(self.api, message)
+                    if self.on_status(user_id, status) is False:
+                        return False
+                elif u'direct_message' in message:
+                    if self.on_direct_message(user_id, message[u'direct_message']) is False:
+                        return False
+                else:
+                    print parsed_data
+                
+    def on_friends(self, user_id, friends_list):
+        print "Friends for %d: %s" % (user_id, ",".join([str(friend) for friend in friends_list]))
+            
+    def on_status(self, user_id, status):
+        print "%d Status: %s" % (user_id, status)
+    
+    def on_follow(self, user_id, source, target, time):
+        """follow has a source, target and created_at"""
+        print "%s Followed by %s at %s" % (target[u'name'], source[u'name'], time)
+    
+    def on_retweet(self, user_id, retweet):
+        print retweet
+        print "%d Retweeted by %s" % (user_id, retweet[u'user'][u'name'])
+    
+    def on_direct_message(self, user_id, message):
+        print "%s Received DM: %s from %s" % (message[u'recipient'][u'name'], message[u'text'], message[u'sender'][u'name'])
+    
+    def on_error(self, status_code):
+        print 'An error has occured! Status code = %s' % status_code
+        return True  # keep stream alive
+
+    def on_timeout(self):
+        print 'Snoozing Zzzzzz'
+                
+        
 class Stream(object):
 
     def __init__(self, auth_handler, listener, timeout=5.0, retry_count = None,
@@ -88,6 +148,7 @@ class Stream(object):
         self.headers['User-Agent'] = APP_NAME
     def _run(self):
         # setup
+        #self.url = "%s?%s" % (self.url, urllib.urlencode(self.parameters))
         auth_url = "%s%s%s" % (self.scheme, self.host, self.url)
         self.auth.apply_auth(url=auth_url, method="POST", headers=self.headers, parameters=self.parameters)
         # enter loop
@@ -140,7 +201,6 @@ class Stream(object):
         while self.running:
             if resp.isclosed():
                 break
-
             # read length
             length = ''
             while True:
@@ -153,7 +213,7 @@ class Stream(object):
                 length = int(length)
             else:
                 continue
-
+                
             # read data and pass into listener
             data = resp.read(length)
             if self.listener.on_data(data) is False:
@@ -209,7 +269,7 @@ class Stream(object):
         self._start(async)
         
     def site_stream(self, follow=None, async=False):
-        params = {}
+        params = {'delimited': 'length'}
         self.headers['Content-type'] = "application/x-www-form-urlencoded"
         if self.running:
             raise TweepError('Stream object already connected!')
