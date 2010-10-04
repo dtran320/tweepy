@@ -18,6 +18,9 @@ json = import_simplejson()
 
 STREAM_VERSION = 1
 
+STREAM_HOST = 'stream.twitter.com'
+SITE_STREAM_HOST = 'betastream.twitter.com'
+APP_NAME = 'conversely1.0'
 
 class StreamListener(object):
 
@@ -66,11 +69,9 @@ class StreamListener(object):
 
 class Stream(object):
 
-    host = 'stream.twitter.com'
-
-    def __init__(self, username, password, listener, timeout=5.0, retry_count = None,
+    def __init__(self, auth_handler, listener, timeout=5.0, retry_count = None,
                     retry_time = 10.0, snooze_time = 5.0, buffer_size=1500, headers=None):
-        self.auth = BasicAuthHandler(username, password)
+        self.auth = auth_handler
         self.running = False
         self.timeout = timeout
         self.retry_count = retry_count
@@ -81,11 +82,14 @@ class Stream(object):
         self.api = API()
         self.headers = headers or {}
         self.body = None
-
+        self.host = STREAM_HOST
+        self.scheme = "http://"
+        self.parameters = {}
+        self.headers['User-Agent'] = APP_NAME
     def _run(self):
         # setup
-        self.auth.apply_auth(None, None, self.headers, None)
-
+        auth_url = "%s%s%s" % (self.scheme, self.host, self.url)
+        self.auth.apply_auth(url=auth_url, method="POST", headers=self.headers, parameters=self.parameters)
         # enter loop
         error_counter = 0
         conn = None
@@ -95,10 +99,14 @@ class Stream(object):
                 # quit if error count greater than retry count
                 break
             try:
-                conn = httplib.HTTPConnection(self.host)
+                if self.scheme == "https://":
+                    conn = httplib.HTTPSConnection(self.host)
+                else:
+                    conn = httplib.HTTPConnection(self.host)
+                conn.set_debuglevel(1)
                 conn.connect()
                 conn.sock.settimeout(self.timeout)
-                conn.request('POST', self.url, self.body, headers=self.headers)
+                conn.request(method='POST', url=self.url, body=self.body, headers=self.headers)
                 resp = conn.getresponse()
                 if resp.status != 200:
                     if self.listener.on_error(resp.status) is False:
@@ -173,19 +181,22 @@ class Stream(object):
         self._start(async)
 
     def sample(self, count=None, async=False):
+        params = {'delimited': 'length'}
         if self.running:
             raise TweepError('Stream object already connected!')
-        self.url = '/%i/statuses/sample.json?delimited=length' % STREAM_VERSION
+        self.url = '/%i/statuses/sample.json' % STREAM_VERSION
         if count:
-            self.url += '&count=%s' % count
+            params['count'] = count
+        self.parameters = params
+        self.body = urllib.urlencode(params)
         self._start(async)
 
     def filter(self, follow=None, track=None, async=False, locations=None):
-        params = {}
+        params = {'delimited': 'length'}
         self.headers['Content-type'] = "application/x-www-form-urlencoded"
         if self.running:
             raise TweepError('Stream object already connected!')
-        self.url = '/%i/statuses/filter.json?delimited=length' % STREAM_VERSION
+        self.url = '/%i/statuses/filter.json' % STREAM_VERSION
         if follow:
             params['follow'] = ','.join(map(str, follow))
         if track:
@@ -193,7 +204,22 @@ class Stream(object):
         if locations and len(locations) > 0:
             assert len(locations) % 4 == 0
             params['locations'] = ','.join(['%.2f' % l for l in locations])
+        self.parameters = params
         self.body = urllib.urlencode(params)
+        self._start(async)
+        
+    def site_stream(self, follow=None, async=False):
+        params = {}
+        self.headers['Content-type'] = "application/x-www-form-urlencoded"
+        if self.running:
+            raise TweepError('Stream object already connected!')
+        self.url = '/2b/site.json'
+        if follow:
+            params['follow'] = ','.join(map(str, follow))
+        self.parameters = params 
+        self.body = urllib.urlencode(params)
+        self.host = SITE_STREAM_HOST
+#        self.scheme = "https://"
         self._start(async)
 
     def disconnect(self):
