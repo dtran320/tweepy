@@ -91,13 +91,18 @@ class SiteStreamListener(object):
                     if message[u'event'] == u'follow':
                         if self.on_follow(user_id, source=message[u'source'], target=message[u'target'], time=message[u'created_at']) is False:
                             return False
-                elif u'retweeted_status' in message:
+                # Need this second check - could be a retweet of a tweet mentioning the user of interest
+                elif u'retweeted_status' in message and message[u'retweeted_status'][u'user'][u'id'] == user_id:
                     if self.on_retweet(user_id, message) is False:
                         return False
                 elif u'text' in message:
                     status = Status.parse(self.api, message)
-                    if self.on_status(user_id, status) is False:
-                        return False
+                    if status.author.id == user_id:     # tweet from the user of interest
+                        if self.on_user_status(user_id, status) is False:
+                            return False
+                    else:   # tweet mentioning the user of interest
+                        if self.on_user_mention(user_id, status) is False:
+                            return False
                 elif u'direct_message' in message:
                     if self.on_direct_message(user_id, message[u'direct_message']) is False:
                         return False
@@ -107,16 +112,18 @@ class SiteStreamListener(object):
     def on_friends(self, user_id, friends_list):
         print "Friends for %d: %s" % (user_id, ",".join([str(friend) for friend in friends_list]))
             
-    def on_status(self, user_id, status):
-        print "%d Status: %s" % (user_id, status)
+    def on_user_status(self, user_id, status):
+        print "%s Status: %s" % (status.author.screen_name, status.text)
     
+    def on_user_mention(self, user_id, status):
+        print "%s Status: %s" % (status.author.screen_name, status.text)
+        
     def on_follow(self, user_id, source, target, time):
         """follow has a source, target and created_at"""
         print "%s Followed by %s at %s" % (target[u'name'], source[u'name'], time)
     
     def on_retweet(self, user_id, retweet):
-        print retweet
-        print "%d Retweeted by %s" % (user_id, retweet[u'user'][u'name'])
+        print "%s Retweeted by %s" % (retweet[u'retweeted_status'][u'user'][u'name'], retweet[u'user'][u'name'])
     
     def on_direct_message(self, user_id, message):
         print "%s Received DM: %s from %s" % (message[u'recipient'][u'name'], message[u'text'], message[u'sender'][u'name'])
