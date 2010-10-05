@@ -113,10 +113,10 @@ class SiteStreamListener(object):
         print "Friends for %d: %s" % (user_id, ",".join([str(friend) for friend in friends_list]))
             
     def on_user_status(self, user_id, status):
-        print "%s Status: %s" % (status.author.screen_name, status.text)
+        print "%s: %s" % (status.author.screen_name, status.text)
     
     def on_user_mention(self, user_id, status):
-        print "%s Status: %s" % (status.author.screen_name, status.text)
+        print "%s: %s" % (status.author.screen_name, status.text)
         
     def on_follow(self, user_id, source, target, time):
         """follow has a source, target and created_at"""
