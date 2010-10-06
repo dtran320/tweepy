@@ -92,7 +92,7 @@ class SiteStreamListener(object):
                         if self.on_follow(user_id, source=message[u'source'], target=message[u'target'], time=message[u'created_at']) is False:
                             return False
                 # Need this second check - could be a retweet of a tweet mentioning the user of interest
-                elif u'retweeted_status' in message and message[u'retweeted_status'][u'user'][u'id'] == user_id:
+                elif u'retweeted_status' in message and int(message[u'retweeted_status'][u'user'][u'id']) == int(user_id):
                     if self.on_retweet(user_id, message) is False:
                         return False
                 elif u'text' in message:
