@@ -52,6 +52,7 @@ class Status(Model):
                 setattr(status, 'user', user)  # DEPRECIATED
             elif k == 'created_at':
                 setattr(status, k, parse_datetime(v))
+                setattr(status, 'created_at_str', v) # keep time string in case we want to convert ourselves
             elif k == 'source':
                 if '<' in v:
                     setattr(status, k, parse_html_value(v))
