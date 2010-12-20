@@ -3,6 +3,7 @@
 # See LICENSE for details.
 
 import httplib
+import socket
 from socket import timeout
 from threading import Thread
 from time import sleep
@@ -185,7 +186,7 @@ class Stream(object):
                 else:
                     error_counter = 0
                     self._read_loop(resp)
-            except (timeout, httplib.IncompleteRead):
+            except (timeout, httplib.IncompleteRead, socket.error):
                 if self.listener.on_timeout() == False:
                     break
                 if self.running is False:
