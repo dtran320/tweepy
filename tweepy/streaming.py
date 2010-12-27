@@ -89,7 +89,16 @@ class SiteStreamListener(object):
                         return False
                 elif u'event' in message:
                     if message[u'event'] == u'follow':
-                        if self.on_follow(user_id, source=message[u'source'], target=message[u'target'], time=message[u'created_at']) is False:
+                        if self.on_follow(user_id, source=message[u'source'], target=message[u'target'],
+                                            time=message[u'created_at']) is False:
+                            return False
+                    elif message[u'event'] == u'favorite':
+                        if self.on_favorite(user_id, source=message[u'source'],
+                                                favorited=message[u'target_object']) is False:
+                            return False
+                    elif message[u'event'] == u'unfavorite':
+                        if self.on_unfavorite(user_id, source=message[u'source'],
+                                                favorited=message[u'target_object']) is False:
                             return False
                 # Need this second check - could be a retweet of a tweet mentioning the user of interest
                 elif u'retweeted_status' in message and int(message[u'retweeted_status'][u'user'][u'id']) == int(user_id):
@@ -127,6 +136,14 @@ class SiteStreamListener(object):
     
     def on_direct_message(self, user_id, message):
         print "%s Received DM: %s from %s" % (message[u'recipient'][u'name'], message[u'text'], message[u'sender'][u'name'])
+    
+    def on_favorite(self, user_id, source, favorited):
+        print "%s favorited %s's tweet: %s" % (source[u'name'], favorited[u'user'][u'name'],
+            favorited[u'text']) 
+    
+    def on_unfavorite(self, user_id, source, favorited):
+        print "%s unfavorited %s's tweet: %s" % (source[u'name'], favorited[u'user'][u'name'],
+            favorited[u'text'])
     
     def on_error(self, status_code):
         print 'An error has occured! Status code = %s' % status_code
