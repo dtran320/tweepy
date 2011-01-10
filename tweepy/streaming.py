@@ -199,7 +199,10 @@ class Stream(object):
                     if self.listener.on_error(resp.status) is False:
                         break
                     error_counter += 1
-                    sleep(self.retry_time)
+                    if resp.status == 401: #sleep longer for twitter capacity issues
+                        sleep(2*self.retry_time)
+                    else:
+                        sleep(self.retry_time)
                 else:
                     error_counter = 0
                     self._read_loop(resp)
