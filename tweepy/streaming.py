@@ -92,9 +92,13 @@ class SiteStreamListener(object):
                         if self.on_follow(user_id, source=message[u'source'], target=message[u'target'],
                                             time=message[u'created_at']) is False:
                             return False
+                    elif message[u'event'] == u'unfollow':
+                        if self.on_unfollow(user_id, source=message[u'source'], target=message[u'target'],
+                                            time=message[u'created_at']) is False:
+                            return False
                     elif message[u'event'] == u'favorite':
-                        if self.on_favorite(user_id, source=message[u'source'],
-                                                favorited=message[u'target_object']) is False:
+                        if self.on_favorite(user_id, source=message[u'source'], favorited=message[u'target_object'], 
+                                                time=message[u'created_at']) is False:
                             return False
                     elif message[u'event'] == u'unfavorite':
                         if self.on_unfavorite(user_id, source=message[u'source'],
@@ -131,15 +135,19 @@ class SiteStreamListener(object):
         """follow has a source, target and created_at"""
         print "%s Followed by %s at %s" % (target[u'name'], source[u'name'], time)
     
+    def on_unfollow(self, user_id, source, target, time):
+        """unfollow has a source, target and created_at"""
+        print "%s Unfollowed by %s at %s" % (target[u'name'], source[u'name'], time)
+    
     def on_retweet(self, user_id, retweet):
         print "%s Retweeted by %s" % (retweet[u'retweeted_status'][u'user'][u'name'], retweet[u'user'][u'name'])
     
     def on_direct_message(self, user_id, message):
         print "%s Received DM: %s from %s" % (message[u'recipient'][u'name'], message[u'text'], message[u'sender'][u'name'])
     
-    def on_favorite(self, user_id, source, favorited):
-        print "%s favorited %s's tweet: %s" % (source[u'name'], favorited[u'user'][u'name'],
-            favorited[u'text']) 
+    def on_favorite(self, user_id, source, favorited, time):
+        print "%s favorited %s's tweet: %s at %s" % (source[u'name'], favorited[u'user'][u'name'],
+            favorited[u'text'], time) 
     
     def on_unfavorite(self, user_id, source, favorited):
         print "%s unfavorited %s's tweet: %s" % (source[u'name'], favorited[u'user'][u'name'],
