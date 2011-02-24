@@ -22,7 +22,7 @@ import settings
 STREAM_VERSION = 1
 
 STREAM_HOST = 'stream.twitter.com'
-SITE_STREAM_HOST = 'betastream.twitter.com'
+SITE_STREAM_HOST = 'sitestream.twitter.com'
 APP_NAME = settings.APP_NAME
 
 class StreamListener(object):
