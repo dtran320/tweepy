@@ -89,41 +89,66 @@ class SiteStreamListener(object):
                         return False
                 elif u'event' in message:
                     if message[u'event'] == u'follow':
-                        if self.on_follow(user_id, source=message[u'source'], target=message[u'target'],
-                                            time=message[u'created_at']) is False:
+                        if self.on_follow(
+                            user_id=user_id, 
+                            source=message[u'source'],
+                            target=message[u'target'],
+                            time=message[u'created_at']
+                        ) is False:
                             return False
                     elif message[u'event'] == u'unfollow':
-                        if self.on_unfollow(user_id, source=message[u'source'], target=message[u'target'],
-                                            time=message[u'created_at']) is False:
+                        if self.on_unfollow(
+                            user_id, 
+                            source=message[u'source'], 
+                            target=message[u'target'],
+                            time=message[u'created_at']
+                        ) is False:
                             return False
                     elif message[u'event'] == u'favorite':
-                        if self.on_favorite(user_id, source=message[u'source'], favorited=message[u'target_object'], 
-                                                time=message[u'created_at']) is False:
+                        if self.on_favorite(
+                            user_id, 
+                            source=message[u'source'], 
+                            favorited=message[u'target_object'], 
+                            time=message[u'created_at']
+                        ) is False:
                             return False
                     elif message[u'event'] == u'unfavorite':
-                        if self.on_unfavorite(user_id, source=message[u'source'],
-                                                favorited=message[u'target_object']) is False:
+                        if self.on_unfavorite(
+                            user_id, 
+                            source=message[u'source'],
+                            favorited=message[u'target_object']
+                        ) is False:
                             return False
-                # Need this second check - could be a retweet of a tweet mentioning the user of interest
-                elif u'retweeted_status' in message and int(message[u'retweeted_status'][u'user'][u'id']) == int(user_id):
+                # Need this second check - could be a retweet of 
+                # a tweet mentioning the user of interest
+                elif (u'retweeted_status' in message and
+                    int(message[u'retweeted_status'][u'user'][u'id']) ==
+                    int(user_id)
+                ):
                     if self.on_retweet(user_id, message) is False:
                         return False
                 elif u'text' in message:
                     status = Status.parse(self.api, message)
-                    if status.author.id == user_id:     # tweet from the user of interest
+                    # tweet from the user of interest
+                    if status.author.id == user_id: 
                         if self.on_user_status(user_id, status) is False:
                             return False
                     else:   # tweet mentioning the user of interest
                         if self.on_user_mention(user_id, status) is False:
                             return False
                 elif u'direct_message' in message:
-                    if self.on_direct_message(user_id, message[u'direct_message']) is False:
+                    if self.on_direct_message(
+                        user_id, message[u'direct_message']
+                    ) is False:
                         return False
                 else:
                     print parsed_data
                 
     def on_friends(self, user_id, friends_list):
-        print "Friends for %d: %s" % (user_id, ",".join([str(friend) for friend in friends_list]))
+        print "Friends for %d: %s" % (
+            user_id, 
+            ",".join([str(friend) for friend in friends_list])
+        )
             
     def on_user_status(self, user_id, status):
         print "%s: %s" % (status.author.screen_name, status.text)
@@ -133,25 +158,50 @@ class SiteStreamListener(object):
         
     def on_follow(self, user_id, source, target, time):
         """follow has a source, target and created_at"""
-        print "%s Followed by %s at %s" % (target[u'name'], source[u'name'], time)
+        print "%s Followed by %s at %s" % (
+            target[u'name'], 
+            source[u'name'], 
+            time
+        )
     
     def on_unfollow(self, user_id, source, target, time):
         """unfollow has a source, target and created_at"""
-        print "%s Unfollowed by %s at %s" % (target[u'name'], source[u'name'], time)
+        print "%s Unfollowed by %s at %s" % (
+            target[u'name'], 
+            source[u'name'], 
+            time
+        )
     
     def on_retweet(self, user_id, retweet):
-        print "%s Retweeted by %s" % (retweet[u'retweeted_status'][u'user'][u'name'], retweet[u'user'][u'name'])
+        print "%s Retweeted by %s" % (
+            retweet[u'retweeted_status'][u'user'][u'name'],
+            retweet[u'user'][u'name']
+        )
     
     def on_direct_message(self, user_id, message):
-        print "%s Received DM: %s from %s" % (message[u'recipient'][u'name'], message[u'text'], message[u'sender'][u'name'])
+        print "%s Received DM: %s from %s" % (
+            message[u'recipient'][u'name'], 
+            message[u'text'], 
+            message[u'sender'][u'name']
+        )
     
     def on_favorite(self, user_id, source, favorited, time):
-        print "%s favorited %s's tweet: %s at %s" % (source[u'name'], favorited[u'user'][u'name'],
-            favorited[u'text'], time) 
+        print "%s favorited %s's tweet: %s at %s" % (
+            source[u'name'], 
+            favorited[u'user'][u'name'],
+            favorited[u'text'], 
+            time
+        ) 
     
     def on_unfavorite(self, user_id, source, favorited):
-        print "%s unfavorited %s's tweet: %s" % (source[u'name'], favorited[u'user'][u'name'],
-            favorited[u'text'])
+        print "%s unfavorited %s's tweet: %s" % (
+            source[u'name'], 
+            favorited[u'user'][u'name'],
+            favorited[u'text']
+        )
+    
+    def on_capacity_error(self, user_ids):
+        return True
     
     def on_error(self, status_code):
         print 'An error has occured! Status code = %s' % status_code
@@ -164,7 +214,8 @@ class SiteStreamListener(object):
 class Stream(object):
 
     def __init__(self, auth_handler, listener, timeout=5.0, retry_count = None,
-                    retry_time = 10.0, snooze_time = 5.0, buffer_size=1500, headers=None):
+                    retry_time = 10.0, snooze_time = 5.0, buffer_size=1500,
+                    headers=None, debug=False):
         self.auth = auth_handler
         self.running = False
         self.timeout = timeout
@@ -180,11 +231,18 @@ class Stream(object):
         self.scheme = "http://"
         self.parameters = {}
         self.headers['User-Agent'] = APP_NAME
+        self.debug = debug
     def _run(self):
         # setup
         #self.url = "%s?%s" % (self.url, urllib.urlencode(self.parameters))
         auth_url = "%s%s%s" % (self.scheme, self.host, self.url)
-        self.auth.apply_auth(url=auth_url, method="POST", headers=self.headers, parameters=self.parameters)
+        self.auth.apply_auth(
+            url=auth_url, 
+            method="POST", 
+            headers=self.headers,
+            parameters=self.parameters
+        )
+        
         # enter loop
         error_counter = 0
         conn = None
@@ -198,16 +256,25 @@ class Stream(object):
                     conn = httplib.HTTPSConnection(self.host)
                 else:
                     conn = httplib.HTTPConnection(self.host)
-                conn.set_debuglevel(1)
+                
+                if self.debug:
+                    conn.set_debuglevel(1)
+                    
                 conn.connect()
                 conn.sock.settimeout(self.timeout)
-                conn.request(method='POST', url=self.url, body=self.body, headers=self.headers)
+                conn.request(
+                    method='POST', 
+                    url=self.url, 
+                    body=self.body, 
+                    headers=self.headers
+                )
                 resp = conn.getresponse()
                 if resp.status != 200:
-                    if self.listener.on_error(resp.status) is False:
+                    if self.listener.on_error(resp.status, params) is False:
                         break
                     error_counter += 1
-                    if resp.status == 401: #sleep longer for twitter capacity issues
+                    # sleep longer for twitter capacity issues
+                    if resp.status == 401: 
                         sleep(2*self.retry_time)
                     else:
                         sleep(self.retry_time)
@@ -266,7 +333,9 @@ class Stream(object):
     def firehose(self, count=None, async=False):
         if self.running:
             raise TweepError('Stream object already connected!')
-        self.url = '/%i/statuses/firehose.json?delimited=length' % STREAM_VERSION
+        self.url = '/%i/statuses/firehose.json?delimited=length' % (
+            STREAM_VERSION
+        )
         if count:
             self.url += '&count=%s' % count
         self._start(async)
@@ -274,7 +343,9 @@ class Stream(object):
     def retweet(self, async=False):
         if self.running:
             raise TweepError('Stream object already connected!')
-        self.url = '/%i/statuses/retweet.json?delimited=length' % STREAM_VERSION
+        self.url = '/%i/statuses/retweet.json?delimited=length' % (
+            STREAM_VERSION
+        )
         self._start(async)
 
     def sample(self, count=None, async=False):
