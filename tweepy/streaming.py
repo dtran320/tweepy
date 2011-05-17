@@ -8,6 +8,7 @@ from socket import timeout
 from threading import Thread
 from time import sleep
 import urllib
+import datetime
 
 from tweepy.auth import BasicAuthHandler
 from tweepy.models import Status
@@ -200,12 +201,17 @@ class SiteStreamListener(object):
             favorited[u'text']
         )
     
-    def on_capacity_error(self, user_ids):
+    def on_capacity_error(self, stream_id):
         return True
     
-    def on_error(self, status_code):
-        print 'An error has occured! Status code = %s' % status_code
-        return True  # keep stream alive
+    def on_error(self, status_code, stream_id):
+        if status_code == 401:
+            return self.on_capacity_error(stream_id)
+        else:
+            print 'An error has occured in stream %d! Status code = %s' % (
+                stream_id, status_code
+            )
+            return True  # keep stream alive
 
     def on_timeout(self):
         print 'Snoozing Zzzzzz'
@@ -213,9 +219,9 @@ class SiteStreamListener(object):
         
 class Stream(object):
 
-    def __init__(self, auth_handler, listener, timeout=5.0, retry_count = None,
+    def __init__(self, auth_handler, listener, timeout=10.0, retry_count = None,
                     retry_time = 10.0, snooze_time = 5.0, buffer_size=1500,
-                    headers=None, debug=False):
+                    headers=None, debug=False, stream_id=None):
         self.auth = auth_handler
         self.running = False
         self.timeout = timeout
@@ -232,6 +238,8 @@ class Stream(object):
         self.parameters = {}
         self.headers['User-Agent'] = APP_NAME
         self.debug = debug
+        self.stream_id = stream_id #Used by external apps to pass an id
+        
     def _run(self):
         # setup
         #self.url = "%s?%s" % (self.url, urllib.urlencode(self.parameters))
@@ -270,7 +278,9 @@ class Stream(object):
                 )
                 resp = conn.getresponse()
                 if resp.status != 200:
-                    if self.listener.on_error(resp.status, params) is False:
+                    if self.listener.on_error(
+                        resp.status, self.parameters, self.stream_id,
+                    ) is False:
                         break
                     error_counter += 1
                     # sleep longer for twitter capacity issues
