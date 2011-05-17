@@ -279,7 +279,7 @@ class Stream(object):
                 resp = conn.getresponse()
                 if resp.status != 200:
                     if self.listener.on_error(
-                        resp.status, self.parameters, self.stream_id,
+                        resp.status, self.stream_id,
                     ) is False:
                         break
                     error_counter += 1
