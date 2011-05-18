@@ -204,8 +204,8 @@ class SiteStreamListener(object):
     def on_capacity_error(self, stream_id):
         return True
     
-    def on_error(self, status_code, stream_id):
-        if status_code == 401:
+    def on_error(self, status_code, stream_id, error_counter, threshold):
+        if status_code == 401 and error_counter >= threshold:
             return self.on_capacity_error(stream_id)
         else:
             print 'An error has occured in stream %d! Status code = %s' % (
@@ -221,7 +221,8 @@ class Stream(object):
 
     def __init__(self, auth_handler, listener, timeout=10.0, retry_count = None,
                     retry_time = 10.0, snooze_time = 5.0, buffer_size=1500,
-                    headers=None, debug=False, stream_id=None):
+                    headers=None, debug=False, stream_id=None, 
+                    capacity_error_threshold=3):
         self.auth = auth_handler
         self.running = False
         self.timeout = timeout
@@ -239,6 +240,7 @@ class Stream(object):
         self.headers['User-Agent'] = APP_NAME
         self.debug = debug
         self.stream_id = stream_id #Used by external apps to pass an id
+        self.capacity_error_threshold = capacity_error_threshold
         
     def _run(self):
         # setup
@@ -279,7 +281,8 @@ class Stream(object):
                 resp = conn.getresponse()
                 if resp.status != 200:
                     if self.listener.on_error(
-                        resp.status, self.stream_id,
+                        resp.status, self.stream_id, error_counter,
+                        self.capacity_error_threshold
                     ) is False:
                         break
                     error_counter += 1
