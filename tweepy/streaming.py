@@ -8,9 +8,7 @@ from socket import timeout
 from threading import Thread
 from time import sleep
 import urllib
-import datetime
 
-from tweepy.auth import BasicAuthHandler
 from tweepy.models import Status
 from tweepy.api import API
 from tweepy.error import TweepError
@@ -25,6 +23,7 @@ STREAM_VERSION = 1
 STREAM_HOST = 'stream.twitter.com'
 SITE_STREAM_HOST = 'sitestream.twitter.com'
 APP_NAME = settings.APP_NAME
+
 
 class StreamListener(object):
 
@@ -48,7 +47,6 @@ class StreamListener(object):
         elif 'limit' in data:
             if self.on_limit(json.loads(data)['limit']['track']) is False:
                 return False
-        
 
     def on_status(self, status):
         """Called when a new status arrives"""
@@ -70,13 +68,14 @@ class StreamListener(object):
         """Called when stream connection times out"""
         return True
 
+
 class SiteStreamListener(object):
     def __init__(self, api=None):
         self.api = api or API()
 
     def on_data(self, data):
         """
-        Generic class for site streams that just print each 
+        Generic class for site streams that just print each
         action that comes in - override these methods to actually
         process them
         """
@@ -91,7 +90,7 @@ class SiteStreamListener(object):
                 elif u'event' in message:
                     if message[u'event'] == u'follow':
                         if self.on_follow(
-                            user_id=user_id, 
+                            user_id=user_id,
                             source=message[u'source'],
                             target=message[u'target'],
                             time=message[u'created_at']
@@ -99,28 +98,28 @@ class SiteStreamListener(object):
                             return False
                     elif message[u'event'] == u'unfollow':
                         if self.on_unfollow(
-                            user_id, 
-                            source=message[u'source'], 
+                            user_id,
+                            source=message[u'source'],
                             target=message[u'target'],
                             time=message[u'created_at']
                         ) is False:
                             return False
                     elif message[u'event'] == u'favorite':
                         if self.on_favorite(
-                            user_id, 
-                            source=message[u'source'], 
-                            favorited=message[u'target_object'], 
+                            user_id,
+                            source=message[u'source'],
+                            favorited=message[u'target_object'],
                             time=message[u'created_at']
                         ) is False:
                             return False
                     elif message[u'event'] == u'unfavorite':
                         if self.on_unfavorite(
-                            user_id, 
+                            user_id,
                             source=message[u'source'],
                             favorited=message[u'target_object']
                         ) is False:
                             return False
-                # Need this second check - could be a retweet of 
+                # Need this second check - could be a retweet of
                 # a tweet mentioning the user of interest
                 elif (u'retweeted_status' in message and
                     int(message[u'retweeted_status'][u'user'][u'id']) ==
@@ -131,7 +130,7 @@ class SiteStreamListener(object):
                 elif u'text' in message:
                     status = Status.parse(self.api, message)
                     # tweet from the user of interest
-                    if status.author.id == user_id: 
+                    if status.author.id == user_id:
                         if self.on_user_status(user_id, status) is False:
                             return False
                     else:   # tweet mentioning the user of interest
@@ -144,66 +143,66 @@ class SiteStreamListener(object):
                         return False
                 else:
                     print parsed_data
-                
+
     def on_friends(self, user_id, friends_list):
         print "Friends for %d: %s" % (
-            user_id, 
+            user_id,
             ",".join([str(friend) for friend in friends_list])
         )
-            
+
     def on_user_status(self, user_id, status):
         print "%s: %s" % (status.author.screen_name, status.text)
-    
+
     def on_user_mention(self, user_id, status):
         print "%s: %s" % (status.author.screen_name, status.text)
-        
+
     def on_follow(self, user_id, source, target, time):
         """follow has a source, target and created_at"""
         print "%s Followed by %s at %s" % (
-            target[u'name'], 
-            source[u'name'], 
+            target[u'name'],
+            source[u'name'],
             time
         )
-    
+
     def on_unfollow(self, user_id, source, target, time):
         """unfollow has a source, target and created_at"""
         print "%s Unfollowed by %s at %s" % (
-            target[u'name'], 
-            source[u'name'], 
+            target[u'name'],
+            source[u'name'],
             time
         )
-    
+
     def on_retweet(self, user_id, retweet):
         print "%s Retweeted by %s" % (
             retweet[u'retweeted_status'][u'user'][u'name'],
             retweet[u'user'][u'name']
         )
-    
+
     def on_direct_message(self, user_id, message):
         print "%s Received DM: %s from %s" % (
-            message[u'recipient'][u'name'], 
-            message[u'text'], 
+            message[u'recipient'][u'name'],
+            message[u'text'],
             message[u'sender'][u'name']
         )
-    
+
     def on_favorite(self, user_id, source, favorited, time):
         print "%s favorited %s's tweet: %s at %s" % (
-            source[u'name'], 
+            source[u'name'],
             favorited[u'user'][u'name'],
-            favorited[u'text'], 
+            favorited[u'text'],
             time
-        ) 
-    
+        )
+
     def on_unfavorite(self, user_id, source, favorited):
         print "%s unfavorited %s's tweet: %s" % (
-            source[u'name'], 
+            source[u'name'],
             favorited[u'user'][u'name'],
             favorited[u'text']
         )
-    
+
     def on_capacity_error(self, stream_id):
         return True
-    
+
     def on_error(self, status_code, stream_id, error_counter, threshold):
         if status_code == 401 and error_counter >= threshold:
             return self.on_capacity_error(stream_id)
@@ -215,13 +214,13 @@ class SiteStreamListener(object):
 
     def on_timeout(self):
         print 'Snoozing Zzzzzz'
-                
-        
+
+
 class Stream(object):
 
-    def __init__(self, auth_handler, listener, timeout=10.0, retry_count = None,
-                    retry_time = 10.0, snooze_time = 5.0, buffer_size=1500,
-                    headers=None, debug=False, stream_id=None, 
+    def __init__(self, auth_handler, listener, timeout=10.0, retry_count=None,
+                    retry_time=10.0, snooze_time=5.0, buffer_size=1500,
+                    headers=None, debug=False, stream_id=None,
                     capacity_error_threshold=3):
         self.auth = auth_handler
         self.running = False
@@ -235,24 +234,24 @@ class Stream(object):
         self.headers = headers or {}
         self.body = None
         self.host = STREAM_HOST
-        self.scheme = "http://"
+        self.scheme = "https://"
         self.parameters = {}
         self.headers['User-Agent'] = APP_NAME
         self.debug = debug
-        self.stream_id = stream_id #Used by external apps to pass an id
+        self.stream_id = stream_id  # Used by external apps to pass an id
         self.capacity_error_threshold = capacity_error_threshold
-        
+
     def _run(self):
         # setup
         #self.url = "%s?%s" % (self.url, urllib.urlencode(self.parameters))
         auth_url = "%s%s%s" % (self.scheme, self.host, self.url)
         self.auth.apply_auth(
-            url=auth_url, 
-            method="POST", 
+            url=auth_url,
+            method="POST",
             headers=self.headers,
             parameters=self.parameters
         )
-        
+
         # enter loop
         error_counter = 0
         conn = None
@@ -266,16 +265,16 @@ class Stream(object):
                     conn = httplib.HTTPSConnection(self.host)
                 else:
                     conn = httplib.HTTPConnection(self.host)
-                
+
                 if self.debug:
                     conn.set_debuglevel(1)
-                    
+
                 conn.connect()
                 conn.sock.settimeout(self.timeout)
                 conn.request(
-                    method='POST', 
-                    url=self.url, 
-                    body=self.body, 
+                    method='POST',
+                    url=self.url,
+                    body=self.body,
                     headers=self.headers
                 )
                 resp = conn.getresponse()
@@ -287,8 +286,8 @@ class Stream(object):
                         break
                     error_counter += 1
                     # sleep longer for twitter capacity issues
-                    if resp.status == 401: 
-                        sleep(2*self.retry_time)
+                    if resp.status == 401:
+                        sleep(2 * self.retry_time)
                     else:
                         sleep(self.retry_time)
                 else:
@@ -330,7 +329,7 @@ class Stream(object):
                 length = int(length)
             else:
                 continue
-                
+
             # read data and pass into listener
             data = resp.read(length)
             if self.listener.on_data(data) is False:
@@ -388,7 +387,7 @@ class Stream(object):
         self.parameters = params
         self.body = urllib.urlencode(params)
         self._start(async)
-        
+
     def site_stream(self, follow=None, async=False):
         params = {'delimited': 'length'}
         self.headers['Content-type'] = "application/x-www-form-urlencoded"
@@ -397,7 +396,7 @@ class Stream(object):
         self.url = '/2b/site.json'
         if follow:
             params['follow'] = ','.join(map(str, follow))
-        self.parameters = params 
+        self.parameters = params
         self.body = urllib.urlencode(params)
         self.host = SITE_STREAM_HOST
 #        self.scheme = "https://"
@@ -407,4 +406,3 @@ class Stream(object):
         if self.running is False:
             return
         self.running = False
-
