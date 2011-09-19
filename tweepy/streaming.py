@@ -14,9 +14,10 @@ from tweepy.api import API
 from tweepy.error import TweepError
 
 from tweepy.utils import import_simplejson
+from tweepy.utils import convert_to_utf8_str
 json = import_simplejson()
-import settings
 
+import settings
 
 STREAM_VERSION = 1
 
@@ -332,6 +333,8 @@ class Stream(object):
 
             # read data and pass into listener
             data = resp.read(length)
+            # Address UnicodeEncodeErrors
+            data = convert_to_utf8_str(data)
             if self.listener.on_data(data) is False:
                 self.running = False
 
