@@ -18,7 +18,7 @@ json = import_simplejson()
 
 import settings
 
-from django.utils.encoding import smart_str
+from django.utils.encoding import smart_unicode
 
 STREAM_VERSION = 1
 
@@ -335,7 +335,7 @@ class Stream(object):
             # read data and pass into listener
             data = resp.read(length)
             # Address UnicodeEncodeErrors
-            data = smart_str(data)
+            data = smart_unicode(data)
             if self.listener.on_data(data) is False:
                 self.running = False
 
